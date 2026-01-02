@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Catalogo: ricerca client-side</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+    h1 { margin: 0 0 12px 0; }
+    .meta { color:#555; font-size: 13px; margin: 8px 0 16px; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; align-items: end; }
+    .field { grid-column: span 3; }
+    .field.wide { grid-column: span 6; }
+    label { display:block; font-size: 12px; color:#444; margin-bottom: 4px; }
+    input, select { width: 100%; padding: 8px; box-sizing: border-box; }
+    button { padding: 9px 14px; cursor: pointer; }
+    .actions { grid-column: span 12; display:flex; gap: 10px; flex-wrap: wrap; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { border-bottom: 1px solid #e5e5e5; padding: 8px; vertical-align: top; }
+    th { text-align: left; font-size: 12px; color:#333; }
+    td { font-size: 13px; }
+    .pill { display:inline-block; padding: 2px 8px; border: 1px solid #ddd; border-radius: 999px; font-size: 12px; margin-right: 6px; }
+    .right { text-align:right; }
+    .muted { color:#666; }
+    a { text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>Catalogo: ricerca (solo file statici)</h1>
+  <div class="meta" id="status">Caricamento dati…</div>
+
+  <div class="grid">
+    <div class="field wide">
+      <label>Autore (contiene)</label>
+      <input id="qAuthor" placeholder="es. Benedetto Croce" />
+    </div>
+    <div class="field wide">
+      <label>Titolo (contiene)</label>
+      <input id="qTitle" placeholder="es. estetica" />
+    </div>
+
+    <div class="field">
+      <label>Fonte</label>
+      <select id="qSource"></select>
+    </div>
+    <div class="field">
+      <label>Lingua</label>
+      <select id="qLang"></select>
+    </div>
+    <div class="field">
+      <label>Anno da</label>
+      <input id="qYearFrom" type="number" placeholder="es. 1890" />
+    </div>
+    <div class="field">
+      <label>Anno a</label>
+      <input id="qYearTo" type="number" placeholder="es. 1930" />
+    </div>
+
+    <div class="actions">
+      <button id="run">Cerca</button>
+      <button id="reset">Reset</button>
+      <span class="muted" id="perf"></span>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Autore</th>
+        <th>Titolo</th>
+        <th>Anno</th>
+        <th>Lingua</th>
+        <th>Fonte</th>
+        <th>Link</th>
+        <th class="right">Score</th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+      <tr><td colspan="7" class="muted">Caricamento…</td></tr>
+    </tbody>
+  </table>
+
+<script>
+  // Metti catalog.json nella stessa cartella di questo file HTML
+  const DATA_URL = "catalog.json";
+
+  let rows = [];
+
+  function norm(s) {
+    return (s ?? "").toString().trim().toLowerCase();
+  }
+
+  function uniq(values) {
+    const s = new Set(values.filter(v => v !== null && v !== undefined && v !== ""));
+    return Array.from(s).sort((a,b) => String(a).localeCompare(String(b)));
+  }
+
+  function setOptions(selectEl, values, allLabel) {
+    selectEl.innerHTML = "";
+    const optAll = document.createElement("option");
+    optAll.value = "";
+    optAll.textContent = allLabel;
+    selectEl.appendChild(optAll);
+    for (const v of values) {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = v;
+      selectEl.appendChild(opt);
+    }
+  }
+
+  function render(list) {
+    const tb = document.getElementById("tbody");
+    tb.innerHTML = "";
+    if (!list.length) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 7;
+      td.className = "muted";
+      td.textContent = "Nessun risultato.";
+      tr.appendChild(td);
+      tb.appendChild(tr);
+      return;
+    }
+
+    for (const r of list) {
+      const tr = document.createElement("tr");
+
+      const tdAuthor = document.createElement("td");
+      tdAuthor.textContent = r.author ?? "";
+      tr.appendChild(tdAuthor);
+
+      const tdTitle = document.createElement("td");
+      tdTitle.textContent = r.title ?? "";
+      tr.appendChild(tdTitle);
+
+      const tdYear = document.createElement("td");
+      tdYear.textContent = (r.year ?? "") === null ? "" : (r.year ?? "");
+      tr.appendChild(tdYear);
+
+      const tdLang = document.createElement("td");
+      tdLang.textContent = r.language ?? "";
+      tr.appendChild(tdLang);
+
+      const tdSource = document.createElement("td");
+      tdSource.textContent = r.source ?? "";
+      tr.appendChild(tdSource);
+
+      const tdLink = document.createElement("td");
+      if (r.record_url) {
+        const a = document.createElement("a");
+        a.href = r.record_url;
+        a.target = "_blank";
+        a.rel = "noreferrer";
+        a.textContent = "Scheda";
+        tdLink.appendChild(a);
+      } else {
+        tdLink.textContent = "";
+      }
+      tr.appendChild(tdLink);
+
+      const tdScore = document.createElement("td");
+      tdScore.className = "right";
+      tdScore.textContent = (r.score ?? "") === null ? "" : (Number(r.score).toFixed(2));
+      tr.appendChild(tdScore);
+
+      tb.appendChild(tr);
+    }
+  }
+
+  function search() {
+    const t0 = performance.now();
+
+    const qA = norm(document.getElementById("qAuthor").value);
+    const qT = norm(document.getElementById("qTitle").value);
+    const qS = document.getElementById("qSource").value;
+    const qL = document.getElementById("qLang").value;
+    const yFrom = document.getElementById("qYearFrom").value;
+    const yTo = document.getElementById("qYearTo").value;
+
+    const yf = yFrom ? Number(yFrom) : null;
+    const yt = yTo ? Number(yTo) : null;
+
+    let out = rows;
+
+    if (qA) out = out.filter(r => norm(r.author).includes(qA));
+    if (qT) out = out.filter(r => norm(r.title).includes(qT));
+    if (qS) out = out.filter(r => (r.source ?? "") === qS);
+    if (qL) out = out.filter(r => (r.language ?? "") === qL);
+    if (yf !== null) out = out.filter(r => r.year !== null && r.year !== undefined && Number(r.year) >= yf);
+    if (yt !== null) out = out.filter(r => r.year !== null && r.year !== undefined && Number(r.year) <= yt);
+
+    // Ordina per score decrescente (se presente)
+    out = out.slice().sort((a,b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+
+    render(out);
+
+    const t1 = performance.now();
+    document.getElementById("perf").textContent = `Risultati: ${out.length}. Tempo query: ${(t1 - t0).toFixed(2)} ms.`;
+  }
+
+  function resetForm() {
+    document.getElementById("qAuthor").value = "";
+    document.getElementById("qTitle").value = "";
+    document.getElementById("qSource").value = "";
+    document.getElementById("qLang").value = "";
+    document.getElementById("qYearFrom").value = "";
+    document.getElementById("qYearTo").value = "";
+    search();
+  }
+
+  async function init() {
+    const status = document.getElementById("status");
+    const t0 = performance.now();
+
+    const resp = await fetch(DATA_URL, { cache: "no-store" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} su ${DATA_URL}`);
+    rows = await resp.json();
+
+    const t1 = performance.now();
+    status.textContent = `Caricati ${rows.length} record. Download+parse: ${(t1 - t0).toFixed(0)} ms.`;
+
+    // Popola select
+    setOptions(document.getElementById("qSource"), uniq(rows.map(r => r.source)), "Tutte le fonti");
+    setOptions(document.getElementById("qLang"), uniq(rows.map(r => r.language)), "Tutte le lingue");
+
+    // Binding
+    document.getElementById("run").addEventListener("click", search);
+    document.getElementById("reset").addEventListener("click", resetForm);
+
+    // Enter per cercare
+    for (const id of ["qAuthor","qTitle","qYearFrom","qYearTo"]) {
+      document.getElementById(id).addEventListener("keydown", (e) => {
+        if (e.key === "Enter") search();
+      });
+    }
+
+    // Prima render
+    search();
+  }
+
+  init().catch(err => {
+    document.getElementById("status").textContent = "Errore: " + err.message;
+    document.getElementById("tbody").innerHTML = `<tr><td colspan="7" class="muted">${err.message}</td></tr>`;
+  });
+</script>
+</body>
+</html>

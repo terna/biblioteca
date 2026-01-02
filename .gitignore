@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs / outputs
+*.log
+output/
+tmp/
