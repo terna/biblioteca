@@ -6,13 +6,14 @@ ho primiMilleLibri.xlsx che copio in primiMilleLibriWorking.xlsx di cui allargo 
 lo passo a ChatGPT e chiedo di: estrarre dal file xlsx, libro per libro, cioè riga per rica, tutto il materiale utile per una ricerca bibliografica nei grandi cataloghi delle biblioteche adottando un formato che indichi, per ogni elemento, il campo di proveniena, es. autore, titolo, ecc. ecc. e salvalo libro per libro in un file csv
 
 Vedere https://chatgpt.com/share/69584cb5-fd0c-8013-bfa4-b1eadad43548
-c'è anche lo script Python riusabile; il file biblio_csv_per_libro.zip contiene i libri, uno per ogni file; il file biblio_longform_all_records.csv contiene i libri in fila, ciascuno con i suoi campi; il punto di inizio è il campo n_scheda
+c'è anche lo script Python riusabile; il file biblio_csv_per_libro.zip contiene i libri, uno per ogni file; il file biblio_longform_all_records.csv contiene tutti i libri in fila, ciascuno con i suoi campi; il punto di inizio è il campo n_scheda
+
+chiedo a ChatGPT un programma Python che legga biblio_longform_all_records.csv considerando uno per uno i libri schedati, sapendo che iniziano con il campo n_scheda, cercando in OPAC SBN, eventualmente usando l'end point pgsql, la migliore scheda del libro, in subordine cercandola in Open Library, in subordine nella Library of Congress, in subordine in Internet Archive.
+Dal ritrovamento trarre campi bibliografici standard da aggiugere in fondo al record del libro, indicando come prima cosa dove sono stati trovati (OPAC SBN or Open Library or Library of Congress or Internet Archive); i record dei libri così integrati devono essere salvati in un archivio csv.
+Il programma deve funzionare in Jupyter anche come concatenazione tra più celle e indicando in una cella, sempre quella, il numero del libro che sta trattando, da uno in su.
+
+vedere https://chatgpt.com/share/6959abcc-287c-8013-a2a7-8b7190ae7fd2
+
+monto il file ricerca_corrispondenze.ipynb con le celle prodotte qui sopra
 
 
-
-
-
-
-
-
-idea: usare OPAC, openlibrary, lib del congresso, internetArchive, in cascata
