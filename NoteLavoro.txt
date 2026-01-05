@@ -14,6 +14,54 @@ Il programma deve funzionare in Jupyter anche come concatenazione tra più celle
 
 vedere https://chatgpt.com/share/6959abcc-287c-8013-a2a7-8b7190ae7fd2
 
-monto il file ricerca_corrispondenze.ipynb con le celle prodotte qui sopra
+preparo il file ricerca_corrispondenze.ipynb con le celle prodotte qui sopra 
 
+lo eseguo su biblio_longform_all_records.csv con MIN_SCORE = 0.55 e trova poche corrispondenze e solo su open library
 
+riprovo con MIN_SCORE = 0.4 cancellando l'output generato con 0.55
+
+il risultato è un file in due parti con le estensioni nella seconda parte, per passare a una versione wide serve la cella finale
+
+i risultati sono molto modesti e ChatGPT propone accrocchi vari; chiedo di farmi tutto in unica cella che arrivi all'output wide.
+Lo fa e mi scrive
+Note operative (minime, ma utili)
+Esegui questa cella: stampa sempre [#/#] n_scheda=... mentre lavora.
+Se interrompi, rilancia: usa biblio_enrich_progress.json + OUTPUT_LONG per riprendere senza duplicare ext_*.
+Il risultato finale in formato wide è biblio_wide_records_enriched.csv.
+Se dopo questo run la copertura è ancora bassa, la prossima leva ad alto rendimento è una regola di ricostruzione titolo (titolo spesso finisce in un campo diverso nei tuoi longform “senza titolo”). In quel caso conviene fare un passaggio di pre-processing prima delle chiamate ai cataloghi.
+
+chiamo il codice ricerca_corrispondenze2.ipynb
+ora ogni libro dura 5" o meno in certe sequenze
+salvo il risultato rinominando biblio_wide_records_enriched.csv a biblio_wide_records_enriched2.csv
+
+trova più corrispondenze, found=498 not_found=502,
+ma mai opac, gli ho chiesto di riscrivere il codice dell'unica cella in mondo che includa le varianti che propone per usare opac
+chatGPT fa il nuovo codice con
+le ndicazioni:
+Se vuoi verificare “perché OPAC non trova”, lascia DEBUG_SBN = True: per ogni libro vedrai quante hit produce SBN per ciascuna variante (isbn, special, any).
+Se il log diventa troppo verboso, metti DEBUG_SBN = False.
+Se, dopo questo, SBN[special] hits=0 sistematicamente, la prossima cosa da fare è una cella di “smoke test” con una query manuale su OPAC dal tuo ambiente (per escludere blocchi di rete o rate-limit).
+
+metto il nuovo codice in ricerca_corrispondenze3.ipynb ma non trova nulla in opac, chatGPT propone due test e risolve il problema, chiedo di rifare il programma che sta in un'unica cella (dal 2 in poi) e lo rimetto nella versione 3
+migliora molto, chiedo di chiarire l'output dei ritrovamenti e lo ri-rimetto in ricerca_corrispondenze3.ipynb
+
+FUNZIONA MOLTO BENE con 5,3" a cella misuratato su 836 casi; su 1000 found=704 not_found=296 | SBN=652 OL=44 LoC=7 IA=1 
+fare mille casi e sottoporre a ChatGPT, chiedendo anche un una url alla pagina descrittiva del libro anche in SBN
+
+faccio proporre una nuova versione che per prudenza chiamo ricerca_corrispondenze4.ipynb e che oltre a generare una url descrittiva sempre contiente una seconda passato ai NOT_FOUND
+il PASS1 è sempre sui 5 o 6"
+alla fine del PASS1 ound=701 not_found=299 | SBN=650 OL=42 LoC=8 IA=1
+
+PASS2 su 299 record, con 10" abbondanti a record
+pass2_found=192 pass2_still_not_found=107 | SBN=161 OL=19 LoC=12 IA=0
+
+****NB i titoli mancanti ORIGINARIAMENTE erano 724, alla fine solo 107****
+
+Ora chiedo la costruzione del programma di interrogazione del catalogo
+
+Mi serve un programma JavaScript che interroghi il file qui caricato, che sarà online nella stessa cartella del programma, e permetta di interagire con il catalogo.
+La pagine deve chiamarsi Biblioteca del Cottolengo.
+La ricerca deve avvenire sui campi titolo, autore, ext_title, ext_author
+Riporta autore, titolo, n_scheda, cod_sez, n_s_sez, soggetto, collezion, ext_source, ext_url
+Ricerca in autore e titolo e in ext_title, ext_author anche per elementi singoli o alcuni (parole o nomi) e non necessariamente in ordine
+non mostrare l'achivio, ma crea un bottone per scaricarlo come file

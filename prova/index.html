@@ -2,248 +2,366 @@
 <html lang="it">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Catalogo: ricerca client-side</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Biblioteca del Cottolengo</title>
+
+  <!-- CSV parser robusto -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
-    h1 { margin: 0 0 12px 0; }
-    .meta { color:#555; font-size: 13px; margin: 8px 0 16px; }
-    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; align-items: end; }
-    .field { grid-column: span 3; }
-    .field.wide { grid-column: span 6; }
-    label { display:block; font-size: 12px; color:#444; margin-bottom: 4px; }
-    input, select { width: 100%; padding: 8px; box-sizing: border-box; }
-    button { padding: 9px 14px; cursor: pointer; }
-    .actions { grid-column: span 12; display:flex; gap: 10px; flex-wrap: wrap; }
-    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-    th, td { border-bottom: 1px solid #e5e5e5; padding: 8px; vertical-align: top; }
-    th { text-align: left; font-size: 12px; color:#333; }
-    td { font-size: 13px; }
-    .pill { display:inline-block; padding: 2px 8px; border: 1px solid #ddd; border-radius: 999px; font-size: 12px; margin-right: 6px; }
-    .right { text-align:right; }
-    .muted { color:#666; }
-    a { text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    :root { --fg:#111; --muted:#666; --bg:#fff; --line:#e7e7e7; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:var(--fg); background:var(--bg); }
+    header { padding:18px 20px; border-bottom:1px solid var(--line); }
+    h1 { margin:0; font-size:20px; font-weight:650; }
+    main { padding:16px 20px 28px; max-width: 1200px; margin:0 auto; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .card { border:1px solid var(--line); border-radius:10px; padding:14px; background:#fff; }
+    .grow { flex:1 1 420px; }
+    label { font-size:12px; color:var(--muted); display:block; margin:0 0 6px; }
+    input[type="text"] { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:14px; }
+    button, .btnlink {
+      padding:10px 12px; border:1px solid var(--line); border-radius:10px;
+      background:#fff; cursor:pointer; font-size:14px; text-decoration:none; color:inherit;
+    }
+    button:hover, .btnlink:hover { background:#f7f7f7; }
+    .meta { color:var(--muted); font-size:12px; }
+    .status { margin-top:10px; color:var(--muted); font-size:12px; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; }
+    th, td { border-top:1px solid var(--line); padding:10px 8px; vertical-align:top; font-size:13px; }
+    th { text-align:left; font-size:12px; color:var(--muted); font-weight:650; background:#fafafa; position:sticky; top:0; }
+    td a { word-break:break-word; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:var(--muted); }
+    .pager { display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+    .hint { color:var(--muted); font-size:12px; margin-top:6px; line-height:1.35; }
+    .toggle { display:flex; align-items:center; gap:8px; user-select:none; }
+    .toggle input { transform: translateY(1px); }
   </style>
 </head>
+
 <body>
-  <h1>Catalogo: ricerca (solo file statici)</h1>
-  <div class="meta" id="status">Caricamento dati…</div>
+  <header>
+    <h1>Biblioteca del Cottolengo</h1>
+  </header>
 
-  <div class="grid">
-    <div class="field wide">
-      <label>Autore (contiene)</label>
-      <input id="qAuthor" placeholder="es. Benedetto Croce" />
+  <main>
+    <div class="card">
+      <div class="row">
+        <div class="grow">
+          <label for="q">Ricerca</label>
+          <input id="q" type="text"
+                 placeholder='Esempi: croce estetica | "filosofia dello spirito" gentile'
+                 autocomplete="off" />
+          <div class="hint">
+            La ricerca è per parole (anche parziali) e non dipende dall’ordine.
+            Se inserisci più parole, devono essere tutte presenti nei campi selezionati.
+            Puoi usare virgolette per frasi.
+          </div>
+
+          <div class="hint" style="margin-top:10px;">
+            <label class="toggle" for="origOnly">
+              <input id="origOnly" type="checkbox" />
+              Ricerca solo nei campi originari: <strong>titolo</strong> e <strong>autore</strong>
+            </label>
+          </div>
+        </div>
+
+        <button id="clearBtn" type="button" title="Pulisci">Pulisci</button>
+
+        <!-- Scarica l'archivio senza mostrarlo -->
+        <a id="downloadBtn" class="btnlink" href="biblio_wide_records_enriched.csv" download>Scarica archivio (CSV)</a>
+      </div>
+
+      <div class="status" id="status">Caricamento archivio…</div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="meta">
+          <span class="pill" id="countPill">0 record</span>
+          <span style="margin-left:10px;" id="matchInfo"></span>
+        </div>
+      </div>
+
+      <div style="overflow:auto; max-height: 70vh;">
+        <table aria-label="Risultati" id="resultsTable" style="display:none;">
+          <thead>
+            <tr>
+              <th>Autore</th>
+              <th>Titolo</th>
+              <th>n_scheda</th>
+              <th>cod_sez</th>
+              <th>n_s_sez</th>
+              <th>Soggetto</th>
+              <th>Collezione</th>
+              <th>Fonte esterna</th>
+              <th>Link esterno</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+
+      <div class="pager" id="pager" style="display:none;">
+        <button id="prevBtn" type="button">Precedente</button>
+        <button id="nextBtn" type="button">Successivo</button>
+        <span class="meta" id="pageInfo"></span>
+      </div>
     </div>
-    <div class="field wide">
-      <label>Titolo (contiene)</label>
-      <input id="qTitle" placeholder="es. estetica" />
-    </div>
+  </main>
 
-    <div class="field">
-      <label>Fonte</label>
-      <select id="qSource"></select>
-    </div>
-    <div class="field">
-      <label>Lingua</label>
-      <select id="qLang"></select>
-    </div>
-    <div class="field">
-      <label>Anno da</label>
-      <input id="qYearFrom" type="number" placeholder="es. 1890" />
-    </div>
-    <div class="field">
-      <label>Anno a</label>
-      <input id="qYearTo" type="number" placeholder="es. 1930" />
-    </div>
+  <script>
+    // === Config ===
+    const CSV_FILENAME = "biblio_wide_records_enriched.csv";
+    const PAGE_SIZE = 50;
 
-    <div class="actions">
-      <button id="run">Cerca</button>
-      <button id="reset">Reset</button>
-      <span class="muted" id="perf"></span>
-    </div>
-  </div>
+    // Campi "originari" richiesti dal flag
+    const ORIG_FIELDS = ["titolo", "autore"];
 
-  <table>
-    <thead>
-      <tr>
-        <th>Autore</th>
-        <th>Titolo</th>
-        <th>Anno</th>
-        <th>Lingua</th>
-        <th>Fonte</th>
-        <th>Link</th>
-        <th class="right">Score</th>
-      </tr>
-    </thead>
-    <tbody id="tbody">
-      <tr><td colspan="7" class="muted">Caricamento…</td></tr>
-    </tbody>
-  </table>
+    // Campi estesi (default)
+    const EXT_FIELDS = ["titolo", "autore", "ext_title", "ext_author"];
 
-<script>
-  // Metti catalog.json nella stessa cartella di questo file HTML
-  const DATA_URL = "catalog.json";
+    // === Stato ===
+    let records = [];   // tutti i record
+    let filtered = [];  // risultati filtrati
+    let page = 1;
 
-  let rows = [];
-
-  function norm(s) {
-    return (s ?? "").toString().trim().toLowerCase();
-  }
-
-  function uniq(values) {
-    const s = new Set(values.filter(v => v !== null && v !== undefined && v !== ""));
-    return Array.from(s).sort((a,b) => String(a).localeCompare(String(b)));
-  }
-
-  function setOptions(selectEl, values, allLabel) {
-    selectEl.innerHTML = "";
-    const optAll = document.createElement("option");
-    optAll.value = "";
-    optAll.textContent = allLabel;
-    selectEl.appendChild(optAll);
-    for (const v of values) {
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v;
-      selectEl.appendChild(opt);
-    }
-  }
-
-  function render(list) {
-    const tb = document.getElementById("tbody");
-    tb.innerHTML = "";
-    if (!list.length) {
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.colSpan = 7;
-      td.className = "muted";
-      td.textContent = "Nessun risultato.";
-      tr.appendChild(td);
-      tb.appendChild(tr);
-      return;
+    // === Utils ===
+    function norm(s) {
+      if (s === null || s === undefined) return "";
+      return String(s)
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .trim();
     }
 
-    for (const r of list) {
-      const tr = document.createElement("tr");
-
-      const tdAuthor = document.createElement("td");
-      tdAuthor.textContent = r.author ?? "";
-      tr.appendChild(tdAuthor);
-
-      const tdTitle = document.createElement("td");
-      tdTitle.textContent = r.title ?? "";
-      tr.appendChild(tdTitle);
-
-      const tdYear = document.createElement("td");
-      tdYear.textContent = (r.year ?? "") === null ? "" : (r.year ?? "");
-      tr.appendChild(tdYear);
-
-      const tdLang = document.createElement("td");
-      tdLang.textContent = r.language ?? "";
-      tr.appendChild(tdLang);
-
-      const tdSource = document.createElement("td");
-      tdSource.textContent = r.source ?? "";
-      tr.appendChild(tdSource);
-
-      const tdLink = document.createElement("td");
-      if (r.record_url) {
-        const a = document.createElement("a");
-        a.href = r.record_url;
-        a.target = "_blank";
-        a.rel = "noreferrer";
-        a.textContent = "Scheda";
-        tdLink.appendChild(a);
-      } else {
-        tdLink.textContent = "";
+    // Tokenizzazione: supporta frasi tra " " o ' '
+    function tokenize(query) {
+      const q = query.trim();
+      if (!q) return [];
+      const tokens = [];
+      const re = /"([^"]+)"|'([^']+)'|(\S+)/g;
+      let m;
+      while ((m = re.exec(q)) !== null) {
+        const t = m[1] || m[2] || m[3];
+        const nt = norm(t);
+        if (nt) tokens.push(nt);
       }
-      tr.appendChild(tdLink);
-
-      const tdScore = document.createElement("td");
-      tdScore.className = "right";
-      tdScore.textContent = (r.score ?? "") === null ? "" : (Number(r.score).toFixed(2));
-      tr.appendChild(tdScore);
-
-      tb.appendChild(tr);
+      return tokens;
     }
-  }
 
-  function search() {
-    const t0 = performance.now();
+    function getActiveFields() {
+      const origOnly = document.getElementById("origOnly").checked;
+      return origOnly ? ORIG_FIELDS : EXT_FIELDS;
+    }
 
-    const qA = norm(document.getElementById("qAuthor").value);
-    const qT = norm(document.getElementById("qTitle").value);
-    const qS = document.getElementById("qSource").value;
-    const qL = document.getElementById("qLang").value;
-    const yFrom = document.getElementById("qYearFrom").value;
-    const yTo = document.getElementById("qYearTo").value;
+    // Precalcolo dei testi ricercabili per entrambe le modalità (veloce e semplice)
+    function buildSearchText(rec, fields) {
+      const parts = fields.map(f => rec[f] ?? "").join(" ");
+      return norm(parts);
+    }
 
-    const yf = yFrom ? Number(yFrom) : null;
-    const yt = yTo ? Number(yTo) : null;
+    function matches(rec, tokens) {
+      if (tokens.length === 0) return false;
+      const fields = getActiveFields();
+      const hay = (fields.length === 2) ? rec.__search_orig : rec.__search_ext;
 
-    let out = rows;
+      // AND su tutte le parole/frasi
+      for (const t of tokens) {
+        if (!hay.includes(t)) return false;
+      }
+      return true;
+    }
 
-    if (qA) out = out.filter(r => norm(r.author).includes(qA));
-    if (qT) out = out.filter(r => norm(r.title).includes(qT));
-    if (qS) out = out.filter(r => (r.source ?? "") === qS);
-    if (qL) out = out.filter(r => (r.language ?? "") === qL);
-    if (yf !== null) out = out.filter(r => r.year !== null && r.year !== undefined && Number(r.year) >= yf);
-    if (yt !== null) out = out.filter(r => r.year !== null && r.year !== undefined && Number(r.year) <= yt);
+    function safe(rec, field) {
+      const v = rec[field];
+      if (v === null || v === undefined) return "";
+      return String(v);
+    }
 
-    // Ordina per score decrescente (se presente)
-    out = out.slice().sort((a,b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+    function render() {
+      const table = document.getElementById("resultsTable");
+      const body = document.getElementById("resultsBody");
+      const pager = document.getElementById("pager");
+      const pageInfo = document.getElementById("pageInfo");
 
-    render(out);
+      body.innerHTML = "";
 
-    const t1 = performance.now();
-    document.getElementById("perf").textContent = `Risultati: ${out.length}. Tempo query: ${(t1 - t0).toFixed(2)} ms.`;
-  }
+      const total = filtered.length;
+      if (total === 0) {
+        table.style.display = "none";
+        pager.style.display = "none";
+        pageInfo.textContent = "";
+        return;
+      }
 
-  function resetForm() {
-    document.getElementById("qAuthor").value = "";
-    document.getElementById("qTitle").value = "";
-    document.getElementById("qSource").value = "";
-    document.getElementById("qLang").value = "";
-    document.getElementById("qYearFrom").value = "";
-    document.getElementById("qYearTo").value = "";
-    search();
-  }
+      const totalPages = Math.ceil(total / PAGE_SIZE);
+      page = Math.max(1, Math.min(page, totalPages));
 
-  async function init() {
-    const status = document.getElementById("status");
-    const t0 = performance.now();
+      const start = (page - 1) * PAGE_SIZE;
+      const end = Math.min(start + PAGE_SIZE, total);
 
-    const resp = await fetch(DATA_URL, { cache: "no-store" });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status} su ${DATA_URL}`);
-    rows = await resp.json();
+      for (let i = start; i < end; i++) {
+        const r = filtered[i];
+        const tr = document.createElement("tr");
 
-    const t1 = performance.now();
-    status.textContent = `Caricati ${rows.length} record. Download+parse: ${(t1 - t0).toFixed(0)} ms.`;
+        const tdAutore = document.createElement("td");
+        tdAutore.textContent = safe(r, "autore");
+        tr.appendChild(tdAutore);
 
-    // Popola select
-    setOptions(document.getElementById("qSource"), uniq(rows.map(r => r.source)), "Tutte le fonti");
-    setOptions(document.getElementById("qLang"), uniq(rows.map(r => r.language)), "Tutte le lingue");
+        const tdTitolo = document.createElement("td");
+        tdTitolo.textContent = safe(r, "titolo");
+        tr.appendChild(tdTitolo);
 
-    // Binding
-    document.getElementById("run").addEventListener("click", search);
-    document.getElementById("reset").addEventListener("click", resetForm);
+        const tdScheda = document.createElement("td");
+        tdScheda.textContent = safe(r, "n_scheda");
+        tr.appendChild(tdScheda);
 
-    // Enter per cercare
-    for (const id of ["qAuthor","qTitle","qYearFrom","qYearTo"]) {
-      document.getElementById(id).addEventListener("keydown", (e) => {
-        if (e.key === "Enter") search();
+        const tdCodSez = document.createElement("td");
+        tdCodSez.textContent = safe(r, "cod_sez");
+        tr.appendChild(tdCodSez);
+
+        const tdNSSez = document.createElement("td");
+        tdNSSez.textContent = safe(r, "n_s_sez");
+        tr.appendChild(tdNSSez);
+
+        const tdSoggetto = document.createElement("td");
+        tdSoggetto.textContent = safe(r, "soggetto");
+        tr.appendChild(tdSoggetto);
+
+        const tdColl = document.createElement("td");
+        tdColl.textContent = safe(r, "collezion");
+        tr.appendChild(tdColl);
+
+        const tdSource = document.createElement("td");
+        tdSource.textContent = safe(r, "ext_source");
+        tr.appendChild(tdSource);
+
+        const tdUrl = document.createElement("td");
+        const url = safe(r, "ext_url").trim();
+        if (url) {
+          const a = document.createElement("a");
+          a.href = url;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.textContent = url;
+          tdUrl.appendChild(a);
+        } else {
+          tdUrl.textContent = "";
+        }
+        tr.appendChild(tdUrl);
+
+        body.appendChild(tr);
+      }
+
+      table.style.display = "";
+      pager.style.display = totalPages > 1 ? "" : "none";
+      pageInfo.textContent = `Pagina ${page} / ${totalPages} — risultati ${start + 1}-${end} di ${total}`;
+    }
+
+    function updateMeta(tokens) {
+      const countPill = document.getElementById("countPill");
+      const matchInfo = document.getElementById("matchInfo");
+      const origOnly = document.getElementById("origOnly").checked;
+
+      countPill.textContent = `${records.length} record`;
+
+      if (!tokens || tokens.length === 0) {
+        matchInfo.textContent = "";
+      } else {
+        const scope = origOnly ? "solo titolo+autore" : "titolo+autore+ext_title+ext_author";
+        matchInfo.textContent = `Trovati: ${filtered.length} (ambito: ${scope}; query: ${tokens.join(" · ")})`;
+      }
+    }
+
+    function runSearch() {
+      const q = document.getElementById("q").value;
+      const tokens = tokenize(q);
+
+      if (tokens.length === 0) {
+        filtered = [];
+        page = 1;
+        updateMeta(tokens);
+        render();
+        return;
+      }
+
+      filtered = records.filter(r => matches(r, tokens));
+      page = 1;
+
+      updateMeta(tokens);
+      render();
+    }
+
+    // === Init ===
+    function setStatus(msg) {
+      document.getElementById("status").textContent = msg;
+    }
+
+    function loadCSV() {
+      document.getElementById("downloadBtn").setAttribute("href", CSV_FILENAME);
+
+      Papa.parse(CSV_FILENAME, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: false,
+        complete: (res) => {
+          if (res.errors && res.errors.length) {
+            setStatus("Caricato con alcuni avvisi; controllare il CSV in caso di anomalie.");
+            console.warn(res.errors);
+          } else {
+            setStatus("Archivio caricato. Inserisci una query per cercare.");
+          }
+
+          records = (res.data || []).map(r => {
+            // Precalcoli per entrambe le modalità
+            r.__search_orig = buildSearchText(r, ORIG_FIELDS);
+            r.__search_ext  = buildSearchText(r, EXT_FIELDS);
+            return r;
+          });
+
+          updateMeta([]);
+        },
+        error: (err) => {
+          console.error(err);
+          setStatus("Errore nel caricamento del CSV. Verifica che la pagina sia servita via HTTP e che il file sia nella stessa cartella.");
+        }
       });
     }
 
-    // Prima render
-    search();
-  }
+    // Eventi UI
+    document.getElementById("q").addEventListener("input", () => {
+      window.clearTimeout(window.__t);
+      window.__t = window.setTimeout(runSearch, 150);
+    });
 
-  init().catch(err => {
-    document.getElementById("status").textContent = "Errore: " + err.message;
-    document.getElementById("tbody").innerHTML = `<tr><td colspan="7" class="muted">${err.message}</td></tr>`;
-  });
-</script>
+    document.getElementById("origOnly").addEventListener("change", () => {
+      // ricalcola subito con l’ambito diverso
+      runSearch();
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      document.getElementById("q").value = "";
+      filtered = [];
+      page = 1;
+      updateMeta([]);
+      render();
+      document.getElementById("q").focus();
+    });
+
+    document.getElementById("prevBtn").addEventListener("click", () => {
+      page = Math.max(1, page - 1);
+      render();
+    });
+
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      page = Math.min(totalPages, page + 1);
+      render();
+    });
+
+    // Avvio
+    loadCSV();
+  </script>
 </body>
 </html>
