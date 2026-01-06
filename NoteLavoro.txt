@@ -1,4 +1,4 @@
-2.1.26
+2.1.26 start
 estratti 1000 libri dal materiale base, cartella "/Users/pt/Documents/verso\ Itaca/biblioteca/catalogazione", file "libri_out ORIGINALE.xlsx"
 
 ho primiMilleLibri.xlsx che copio in primiMilleLibriWorking.xlsx di cui allargo le colonne per leggere le dide e cancello le colonne volume, illustr, data_crea
@@ -13,6 +13,8 @@ Dal ritrovamento trarre campi bibliografici standard da aggiugere in fondo al re
 Il programma deve funzionare in Jupyter anche come concatenazione tra più celle e indicando in una cella, sempre quella, il numero del libro che sta trattando, da uno in su.
 
 vedere https://chatgpt.com/share/6959abcc-287c-8013-a2a7-8b7190ae7fd2
+
+annoto che OPAC SBN WordCat sono simili, https://chatgpt.com/share/695c074c-08fc-8013-9772-057b18ec3cf2
 
 preparo il file ricerca_corrispondenze.ipynb con le celle prodotte qui sopra 
 
@@ -65,3 +67,26 @@ La ricerca deve avvenire sui campi titolo, autore, ext_title, ext_author
 Riporta autore, titolo, n_scheda, cod_sez, n_s_sez, soggetto, collezion, ext_source, ext_url
 Ricerca in autore e titolo e in ext_title, ext_author anche per elementi singoli o alcuni (parole o nomi) e non necessariamente in ordine
 non mostrare l'achivio, ma crea un bottone per scaricarlo come file
+
+aggiungo: Aggiungi un flag che impone "ricerca solo nei campi titolo e autore ORIGINARI" e produci di nuovo il programma
+
+metto il programma prodotto in prova/ con nome index.html
+
+commit & push 5.1.26
+
+miglioramenti richiesti per il programma in JavaScript: 
+due campi distinti di ricerca: autore e titolo;
+non deve usare parti di parole, ma singole parole anche non in ordine, indicando l'item bibliogfrafico anche se qualcuna non è compresa;
+correggi il suggerimento di uso; come autore proponi Edit Stein;
+ottimo l'uso delle parole come sequenza tra virgolette, fai un esempio che operi con questi libri contenuti in biblio_wide_records_enriched.csv, meglio se nel campo ext_title;
+output nella pagina su più righe:
+prima riga i campi autore e titolo;
+seconda riga i campi ext_source, ext_author, ext_title indicando che sono tratti da ext_source;
+terza riga con n_scheda, cod_sez, n_s_sez, soggetto, collezion, ext_url;
+mantieni il flag, i due bottoni e la finestra con il numero dei record.
+rischieste 6.1.26
+
+ERRORE ERRORE ERRORE
+rileggendo la mail a Panzanelli, Donà e GPZ del 20.2.25 h. 12:29 che contiene analisi e allegati sulla classificazione, scopro che sono partito dal file sbagliato, senza segnature
+
+ripartire dal file libri_out_con_segnature.xlsx e produrre 

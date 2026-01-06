@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Biblioteca del Cottolengo</title>
+
+  <!-- CSV parser robusto -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <style>
+    :root { --fg:#111; --muted:#666; --bg:#fff; --line:#e7e7e7; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:var(--fg); background:var(--bg); }
+    header { padding:18px 20px; border-bottom:1px solid var(--line); }
+    h1 { margin:0; font-size:20px; font-weight:650; }
+    main { padding:16px 20px 28px; max-width: 1200px; margin:0 auto; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .card { border:1px solid var(--line); border-radius:10px; padding:14px; background:#fff; }
+    .grow { flex:1 1 420px; }
+    label { font-size:12px; color:var(--muted); display:block; margin:0 0 6px; }
+    input[type="text"] { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:14px; }
+    button, .btnlink {
+      padding:10px 12px; border:1px solid var(--line); border-radius:10px;
+      background:#fff; cursor:pointer; font-size:14px; text-decoration:none; color:inherit;
+    }
+    button:hover, .btnlink:hover { background:#f7f7f7; }
+    .meta { color:var(--muted); font-size:12px; }
+    .status { margin-top:10px; color:var(--muted); font-size:12px; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; }
+    th, td { border-top:1px solid var(--line); padding:10px 8px; vertical-align:top; font-size:13px; }
+    th { text-align:left; font-size:12px; color:var(--muted); font-weight:650; background:#fafafa; position:sticky; top:0; }
+    td a { word-break:break-word; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:var(--muted); }
+    .pager { display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+    .hint { color:var(--muted); font-size:12px; margin-top:6px; line-height:1.35; }
+    .toggle { display:flex; align-items:center; gap:8px; user-select:none; }
+    .toggle input { transform: translateY(1px); }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Biblioteca del Cottolengo</h1>
+  </header>
+
+  <main>
+    <div class="card">
+      <div class="row">
+        <div class="grow">
+          <label for="q">Ricerca</label>
+          <input id="q" type="text"
+                 placeholder='Esempi: croce estetica | "filosofia dello spirito" gentile'
+                 autocomplete="off" />
+          <div class="hint">
+            La ricerca è per parole (anche parziali) e non dipende dall’ordine.
+            Se inserisci più parole, devono essere tutte presenti nei campi selezionati.
+            Puoi usare virgolette per frasi.
+          </div>
+
+          <div class="hint" style="margin-top:10px;">
+            <label class="toggle" for="origOnly">
+              <input id="origOnly" type="checkbox" />
+              Ricerca solo nei campi originari: <strong>titolo</strong> e <strong>autore</strong>
+            </label>
+          </div>
+        </div>
+
+        <button id="clearBtn" type="button" title="Pulisci">Pulisci</button>
+
+        <!-- Scarica l'archivio senza mostrarlo -->
+        <a id="downloadBtn" class="btnlink" href="biblio_wide_records_enriched.csv" download>Scarica archivio (CSV)</a>
+      </div>
+
+      <div class="status" id="status">Caricamento archivio…</div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="meta">
+          <span class="pill" id="countPill">0 record</span>
+          <span style="margin-left:10px;" id="matchInfo"></span>
+        </div>
+      </div>
+
+      <div style="overflow:auto; max-height: 70vh;">
+        <table aria-label="Risultati" id="resultsTable" style="display:none;">
+          <thead>
+            <tr>
+              <th>Autore</th>
+              <th>Titolo</th>
+              <th>n_scheda</th>
+              <th>cod_sez</th>
+              <th>n_s_sez</th>
+              <th>Soggetto</th>
+              <th>Collezione</th>
+              <th>Fonte esterna</th>
+              <th>Link esterno</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+
+      <div class="pager" id="pager" style="display:none;">
+        <button id="prevBtn" type="button">Precedente</button>
+        <button id="nextBtn" type="button">Successivo</button>
+        <span class="meta" id="pageInfo"></span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // === Config ===
+    const CSV_FILENAME = "biblio_wide_records_enriched.csv";
+    const PAGE_SIZE = 50;
+
+    // Campi "originari" richiesti dal flag
+    const ORIG_FIELDS = ["titolo", "autore"];
+
+    // Campi estesi (default)
+    const EXT_FIELDS = ["titolo", "autore", "ext_title", "ext_author"];
+
+    // === Stato ===
+    let records = [];   // tutti i record
+    let filtered = [];  // risultati filtrati
+    let page = 1;
+
+    // === Utils ===
+    function norm(s) {
+      if (s === null || s === undefined) return "";
+      return String(s)
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .trim();
+    }
+
+    // Tokenizzazione: supporta frasi tra " " o ' '
+    function tokenize(query) {
+      const q = query.trim();
+      if (!q) return [];
+      const tokens = [];
+      const re = /"([^"]+)"|'([^']+)'|(\S+)/g;
+      let m;
+      while ((m = re.exec(q)) !== null) {
+        const t = m[1] || m[2] || m[3];
+        const nt = norm(t);
+        if (nt) tokens.push(nt);
+      }
+      return tokens;
+    }
+
+    function getActiveFields() {
+      const origOnly = document.getElementById("origOnly").checked;
+      return origOnly ? ORIG_FIELDS : EXT_FIELDS;
+    }
+
+    // Precalcolo dei testi ricercabili per entrambe le modalità (veloce e semplice)
+    function buildSearchText(rec, fields) {
+      const parts = fields.map(f => rec[f] ?? "").join(" ");
+      return norm(parts);
+    }
+
+    function matches(rec, tokens) {
+      if (tokens.length === 0) return false;
+      const fields = getActiveFields();
+      const hay = (fields.length === 2) ? rec.__search_orig : rec.__search_ext;
+
+      // AND su tutte le parole/frasi
+      for (const t of tokens) {
+        if (!hay.includes(t)) return false;
+      }
+      return true;
+    }
+
+    function safe(rec, field) {
+      const v = rec[field];
+      if (v === null || v === undefined) return "";
+      return String(v);
+    }
+
+    function render() {
+      const table = document.getElementById("resultsTable");
+      const body = document.getElementById("resultsBody");
+      const pager = document.getElementById("pager");
+      const pageInfo = document.getElementById("pageInfo");
+
+      body.innerHTML = "";
+
+      const total = filtered.length;
+      if (total === 0) {
+        table.style.display = "none";
+        pager.style.display = "none";
+        pageInfo.textContent = "";
+        return;
+      }
+
+      const totalPages = Math.ceil(total / PAGE_SIZE);
+      page = Math.max(1, Math.min(page, totalPages));
+
+      const start = (page - 1) * PAGE_SIZE;
+      const end = Math.min(start + PAGE_SIZE, total);
+
+      for (let i = start; i < end; i++) {
+        const r = filtered[i];
+        const tr = document.createElement("tr");
+
+        const tdAutore = document.createElement("td");
+        tdAutore.textContent = safe(r, "autore");
+        tr.appendChild(tdAutore);
+
+        const tdTitolo = document.createElement("td");
+        tdTitolo.textContent = safe(r, "titolo");
+        tr.appendChild(tdTitolo);
+
+        const tdScheda = document.createElement("td");
+        tdScheda.textContent = safe(r, "n_scheda");
+        tr.appendChild(tdScheda);
+
+        const tdCodSez = document.createElement("td");
+        tdCodSez.textContent = safe(r, "cod_sez");
+        tr.appendChild(tdCodSez);
+
+        const tdNSSez = document.createElement("td");
+        tdNSSez.textContent = safe(r, "n_s_sez");
+        tr.appendChild(tdNSSez);
+
+        const tdSoggetto = document.createElement("td");
+        tdSoggetto.textContent = safe(r, "soggetto");
+        tr.appendChild(tdSoggetto);
+
+        const tdColl = document.createElement("td");
+        tdColl.textContent = safe(r, "collezion");
+        tr.appendChild(tdColl);
+
+        const tdSource = document.createElement("td");
+        tdSource.textContent = safe(r, "ext_source");
+        tr.appendChild(tdSource);
+
+        const tdUrl = document.createElement("td");
+        const url = safe(r, "ext_url").trim();
+        if (url) {
+          const a = document.createElement("a");
+          a.href = url;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.textContent = url;
+          tdUrl.appendChild(a);
+        } else {
+          tdUrl.textContent = "";
+        }
+        tr.appendChild(tdUrl);
+
+        body.appendChild(tr);
+      }
+
+      table.style.display = "";
+      pager.style.display = totalPages > 1 ? "" : "none";
+      pageInfo.textContent = `Pagina ${page} / ${totalPages} — risultati ${start + 1}-${end} di ${total}`;
+    }
+
+    function updateMeta(tokens) {
+      const countPill = document.getElementById("countPill");
+      const matchInfo = document.getElementById("matchInfo");
+      const origOnly = document.getElementById("origOnly").checked;
+
+      countPill.textContent = `${records.length} record`;
+
+      if (!tokens || tokens.length === 0) {
+        matchInfo.textContent = "";
+      } else {
+        const scope = origOnly ? "solo titolo+autore" : "titolo+autore+ext_title+ext_author";
+        matchInfo.textContent = `Trovati: ${filtered.length} (ambito: ${scope}; query: ${tokens.join(" · ")})`;
+      }
+    }
+
+    function runSearch() {
+      const q = document.getElementById("q").value;
+      const tokens = tokenize(q);
+
+      if (tokens.length === 0) {
+        filtered = [];
+        page = 1;
+        updateMeta(tokens);
+        render();
+        return;
+      }
+
+      filtered = records.filter(r => matches(r, tokens));
+      page = 1;
+
+      updateMeta(tokens);
+      render();
+    }
+
+    // === Init ===
+    function setStatus(msg) {
+      document.getElementById("status").textContent = msg;
+    }
+
+    function loadCSV() {
+      document.getElementById("downloadBtn").setAttribute("href", CSV_FILENAME);
+
+      Papa.parse(CSV_FILENAME, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: false,
+        complete: (res) => {
+          if (res.errors && res.errors.length) {
+            setStatus("Caricato con alcuni avvisi; controllare il CSV in caso di anomalie.");
+            console.warn(res.errors);
+          } else {
+            setStatus("Archivio caricato. Inserisci una query per cercare.");
+          }
+
+          records = (res.data || []).map(r => {
+            // Precalcoli per entrambe le modalità
+            r.__search_orig = buildSearchText(r, ORIG_FIELDS);
+            r.__search_ext  = buildSearchText(r, EXT_FIELDS);
+            return r;
+          });
+
+          updateMeta([]);
+        },
+        error: (err) => {
+          console.error(err);
+          setStatus("Errore nel caricamento del CSV. Verifica che la pagina sia servita via HTTP e che il file sia nella stessa cartella.");
+        }
+      });
+    }
+
+    // Eventi UI
+    document.getElementById("q").addEventListener("input", () => {
+      window.clearTimeout(window.__t);
+      window.__t = window.setTimeout(runSearch, 150);
+    });
+
+    document.getElementById("origOnly").addEventListener("change", () => {
+      // ricalcola subito con l’ambito diverso
+      runSearch();
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      document.getElementById("q").value = "";
+      filtered = [];
+      page = 1;
+      updateMeta([]);
+      render();
+      document.getElementById("q").focus();
+    });
+
+    document.getElementById("prevBtn").addEventListener("click", () => {
+      page = Math.max(1, page - 1);
+      render();
+    });
+
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      page = Math.min(totalPages, page + 1);
+      render();
+    });
+
+    // Avvio
+    loadCSV();
+  </script>
+</body>
+</html>
