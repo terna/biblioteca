@@ -1,0 +1,28 @@
+Scrivo a Dolce, Donà, Panzanelli, Zanetta
+
+usato una cascata di ricerca Opac SBN, Open Library, Library of Congress Catalog, Internet Archive in cascata
+
+OpacSBN e WorldCat sono strettamente interconnessi con ...
+
+primi mille com prova, il tempo di cacolo è cira 1,5 ore per via della ricerca online
+
+dopo la ricerca è immediata
+
+provare a ...
+
+prove, poi incontro di persona o online, poi avvio la produzione con 3000 libri per notte, circa 5 ore, 16 giorni
+
+i primi mille libri sono schedati in modo piuttosto incompleto, ottimo banco di prova; la segnatura inizia prevalentemente con SR, quindi sono libri nella dispobilità delle Suore, ma come esperimento va benissimo, essendo record incompleti
+
+da 700? senza titolo a 100?
+
+esempio con ""
+
+prova con e senza flag
+
+---
+
+poi con OK GPZ scrivo a Fratel Luca Bianchini e don Paolo Boggio
+
+Fratel Luca Bianchini <fr.luca@cottolengo.org>
+Don Paolo Boggio <paoloboggio@cottolengo.org>
