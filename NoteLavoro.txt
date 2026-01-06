@@ -131,8 +131,12 @@ in fondo alla prima riga di risposta metti il campo pagine
 dopo la casella n_s_sez metti segnatura seguita dal contenuto di noName ma senza indicare il nome di quest'ultimo campo
 tutto il resto invariato
 
+poi precisazione:
+considerando il file biblio_wide_records_enriched.csv migliora il programma JavaScript del file index.html:
+dopo il campo segnatura devi scrivere il contenuto di quel campo seguito dal contenuto di noName ma senza indicare il nome di quest'ultimo campo
+tutto il resto 
 
-uso temporaneamente prova2/ con l'archivio senza SBN e il nuovo index.html versione due con le correzioni qui sopra
+uso temporaneamente prova2/ con l'archivio senza SBN e il nuovo index.html versione ter con le correzioni qui sopra
 
 
 

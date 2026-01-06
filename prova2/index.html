@@ -325,7 +325,7 @@
           `<span class="sep">|</span>` +
           `<span class="kv"><span class="muted">n_s_sez:</span> ${escapeHtml(safe(rec, "n_s_sez"))}</span>` +
           `<span class="sep">|</span>` +
-          `<span class="kv"><span class="muted">segnatura:</span> ${escapeHtml(safe(rec, "noName"))}</span>` +
+          `<span class="kv"><span class="muted">segnatura:</span> ${escapeHtml(safe(rec, "segnatura"))}${safe(rec, "noName") ? " / " + escapeHtml(safe(rec, "noName")) : ""}</span>` +
           `<span class="sep">|</span>` +
           `<span class="kv"><span class="muted">soggetto:</span> ${escapeHtml(safe(rec, "soggetto"))}</span>` +
           `<span class="sep">|</span>` +
