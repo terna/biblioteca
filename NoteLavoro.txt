@@ -132,7 +132,7 @@ dopo la casella n_s_sez metti segnatura seguita dal contenuto di noName ma senza
 tutto il resto invariato
 
 
-uso temporaneamente prova2/ con l'archivio senza SBN e il nuovo index.html
+uso temporaneamente prova2/ con l'archivio senza SBN e il nuovo index.html versione due con le correzioni qui sopra
 
 
 
