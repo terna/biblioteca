@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Biblioteca del Cottolengo</title>
+
+  <!-- CSV parser -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <style>
+    :root { --fg:#111; --muted:#666; --bg:#fff; --line:#e7e7e7; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:var(--fg); background:var(--bg); }
+    header { padding:18px 20px; border-bottom:1px solid var(--line); }
+    h1 { margin:0; font-size:20px; font-weight:650; }
+    main { padding:16px 20px 28px; max-width: 1200px; margin:0 auto; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+    .card { border:1px solid var(--line); border-radius:10px; padding:14px; background:#fff; }
+    .field { flex:1 1 340px; }
+    label { font-size:12px; color:var(--muted); display:block; margin:0 0 6px; }
+    input[type="text"] { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:14px; }
+    button, .btnlink {
+      padding:10px 12px; border:1px solid var(--line); border-radius:10px;
+      background:#fff; cursor:pointer; font-size:14px; text-decoration:none; color:inherit;
+    }
+    button:hover, .btnlink:hover { background:#f7f7f7; }
+    .meta { color:var(--muted); font-size:12px; }
+    .status { margin-top:10px; color:var(--muted); font-size:12px; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:var(--muted); }
+    .pager { display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+    .hint { color:var(--muted); font-size:12px; margin-top:6px; line-height:1.35; }
+    .toggleRow { display:flex; gap:18px; flex-wrap:wrap; margin-top:10px; }
+    .toggle { display:flex; align-items:center; gap:8px; user-select:none; }
+    .toggle input { transform: translateY(1px); }
+
+    /* Results */
+    .results { margin-top:12px; display:flex; flex-direction:column; gap:10px; }
+    .item { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#fff; }
+    .line1 { font-size:14px; font-weight:600; }
+    .line2, .line3 { font-size:13px; margin-top:6px; color:#222; }
+    .muted { color:var(--muted); font-weight:500; }
+    .kv { display:inline; }
+    .sep { color:var(--muted); padding:0 6px; }
+    .url { word-break:break-word; }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Biblioteca del Cottolengo</h1>
+  </header>
+
+  <main>
+    <div class="card">
+      <div class="row">
+        <div class="field">
+          <label for="qAuthor">Ricerca per autore</label>
+          <input id="qAuthor" type="text" placeholder='Esempio: Edith Stein' autocomplete="off" />
+        </div>
+
+        <div class="field">
+          <label for="qTitle">Ricerca per titolo</label>
+          <input id="qTitle" type="text" placeholder='Esempio: "Introduzione alla filosofia"' autocomplete="off" />
+        </div>
+
+        <button id="clearBtn" type="button" title="Pulisci">Pulisci</button>
+
+        <!-- Scarica l'archivio senza mostrarlo -->
+        <a id="downloadBtn" class="btnlink" href="biblio_wide_records_enriched.csv" download>Scarica archivio (CSV)</a>
+      </div>
+
+      <div class="hint" style="margin-top:10px;">
+        La ricerca usa <strong>parole intere</strong> (non parti di parola), non dipende dall’ordine.
+        Puoi usare virgolette per una sequenza, ad esempio nel titolo: <strong>"Introduzione alla filosofia"</strong>
+        (presente in <code>ext_title</code> nel file).
+      </div>
+
+      <div class="toggleRow">
+        <label class="toggle" for="origOnly">
+          <input id="origOnly" type="checkbox" />
+          Ricerca solo nei campi originari: <strong>titolo</strong> e <strong>autore</strong>
+        </label>
+
+        <label class="toggle" for="strictAll">
+          <input id="strictAll" type="checkbox" />
+          Modalità rigorosa: <strong>tutte</strong> le parole/frasi devono essere presenti (AND)
+        </label>
+      </div>
+
+      <div class="status" id="status">Caricamento archivio…</div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="meta">
+          <span class="pill" id="countPill">0 record</span>
+          <span style="margin-left:10px;" id="matchInfo"></span>
+        </div>
+      </div>
+
+      <div id="results" class="results" style="display:none;"></div>
+
+      <div class="pager" id="pager" style="display:none;">
+        <button id="prevBtn" type="button">Precedente</button>
+        <button id="nextBtn" type="button">Successivo</button>
+        <span class="meta" id="pageInfo"></span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // === Config ===
+    const CSV_FILENAME = "biblio_wide_records_enriched.csv";
+    const PAGE_SIZE = 50;
+
+    // Campi originari (flag attivo)
+    const ORIG_AUTHOR_FIELDS = ["autore"];
+    const ORIG_TITLE_FIELDS  = ["titolo"];
+
+    // Campi estesi (default)
+    const EXT_AUTHOR_FIELDS = ["autore", "ext_author"];
+    const EXT_TITLE_FIELDS  = ["titolo", "ext_title"];
+
+    // === Stato ===
+    let records = [];   // tutti i record
+    let filtered = [];  // risultati filtrati (con score)
+    let page = 1;
+
+    // === Normalizzazione ===
+    function norm(s) {
+      if (s === null || s === undefined) return "";
+      return String(s)
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .trim();
+    }
+
+    // Tokenizzazione: parole + frasi tra virgolette
+    function tokenizeRich(query) {
+      const q = (query || "").trim();
+      if (!q) return [];
+      const tokens = [];
+      const re = /"([^"]+)"|'([^']+)'|(\S+)/g;
+      let m;
+      while ((m = re.exec(q)) !== null) {
+        const raw = m[1] || m[2] || m[3];
+        const v = norm(raw);
+        if (!v) continue;
+        const isPhrase = (m[1] !== undefined && m[1] !== null) || (m[2] !== undefined && m[2] !== null);
+        tokens.push({ type: isPhrase ? "phrase" : "word", value: v });
+      }
+      return tokens;
+    }
+
+    function getActiveFields() {
+      const origOnly = document.getElementById("origOnly").checked;
+      return {
+        authorFields: origOnly ? ORIG_AUTHOR_FIELDS : EXT_AUTHOR_FIELDS,
+        titleFields:  origOnly ? ORIG_TITLE_FIELDS  : EXT_TITLE_FIELDS
+      };
+    }
+
+    // Precalcolo: testo normalizzato (phrase) + set di parole (word intere)
+    function buildIndexForFields(rec, fields) {
+      const joined = fields.map(f => rec[f] ?? "").join(" ");
+      const text = norm(joined);
+      const words = new Set(text ? text.split(/\s+/).filter(Boolean) : []);
+      return { text, words };
+    }
+
+    function matchSide(indexObj, tokens) {
+      if (tokens.length === 0) return { matched: 0, total: 0 };
+      let matched = 0;
+      for (const t of tokens) {
+        if (t.type === "word") {
+          if (indexObj.words.has(t.value)) matched++;
+        } else {
+          if (indexObj.text.includes(t.value)) matched++;
+        }
+      }
+      return { matched, total: tokens.length };
+    }
+
+    function computeScore(authorMatch, titleMatch) {
+      const matched = authorMatch.matched + titleMatch.matched;
+      const total = authorMatch.total + titleMatch.total;
+      const ratio = total > 0 ? (matched / total) : 0;
+      return { matched, total, ratio };
+    }
+
+    function safe(rec, field) {
+      const v = rec[field];
+      if (v === null || v === undefined) return "";
+      return String(v);
+    }
+
+    function asLink(url) {
+      const u = (url || "").trim();
+      if (!u) return "";
+      return u;
+    }
+
+    function updateActiveIndexes() {
+      const { authorFields, titleFields } = getActiveFields();
+      const isOrigAuthor = (authorFields.length === 1 && authorFields[0] === "autore");
+      const isOrigTitle  = (titleFields.length === 1 && titleFields[0] === "titolo");
+
+      for (const r of records) {
+        r.__idx_author_active = isOrigAuthor ? r.__idx_author_orig : r.__idx_author_ext;
+        r.__idx_title_active  = isOrigTitle  ? r.__idx_title_orig  : r.__idx_title_ext;
+      }
+    }
+
+    function runSearch() {
+      const qA = document.getElementById("qAuthor").value;
+      const qT = document.getElementById("qTitle").value;
+
+      const tokensA = tokenizeRich(qA);
+      const tokensT = tokenizeRich(qT);
+
+      const strictAll = document.getElementById("strictAll").checked;
+
+      const anyTokens = (tokensA.length + tokensT.length) > 0;
+      if (!anyTokens) {
+        filtered = [];
+        page = 1;
+        updateMeta(tokensA, tokensT);
+        render();
+        return;
+      }
+
+      filtered = records.map(r => {
+        const authorMatch = matchSide(r.__idx_author_active, tokensA);
+        const titleMatch  = matchSide(r.__idx_title_active, tokensT);
+        const score = computeScore(authorMatch, titleMatch);
+        return { rec: r, authorMatch, titleMatch, score };
+      }).filter(x => {
+        if (strictAll) {
+          // AND rigoroso: tutte le parole/frasi devono essere presenti dove pertinenti (autore/titolo)
+          const okA = (tokensA.length === 0) ? true : (x.authorMatch.matched === x.authorMatch.total);
+          const okT = (tokensT.length === 0) ? true : (x.titleMatch.matched  === x.titleMatch.total);
+          return okA && okT;
+        }
+        // default: almeno 1 token matchato complessivamente
+        return x.score.matched > 0;
+      });
+
+      // Ordina: più match, poi ratio, poi autore/titolo
+      filtered.sort((a, b) => {
+        if (b.score.matched !== a.score.matched) return b.score.matched - a.score.matched;
+        if (b.score.ratio !== a.score.ratio) return b.score.ratio - a.score.ratio;
+        const aa = norm(a.rec.autore || "");
+        const ba = norm(b.rec.autore || "");
+        if (aa !== ba) return aa.localeCompare(ba);
+        const at = norm(a.rec.titolo || "");
+        const bt = norm(b.rec.titolo || "");
+        return at.localeCompare(bt);
+      });
+
+      page = 1;
+      updateMeta(tokensA, tokensT);
+      render();
+    }
+
+    function render() {
+      const resultsDiv = document.getElementById("results");
+      const pager = document.getElementById("pager");
+      const pageInfo = document.getElementById("pageInfo");
+
+      resultsDiv.innerHTML = "";
+
+      const total = filtered.length;
+      if (total === 0) {
+        resultsDiv.style.display = "none";
+        pager.style.display = "none";
+        pageInfo.textContent = "";
+        return;
+      }
+
+      const totalPages = Math.ceil(total / PAGE_SIZE);
+      page = Math.max(1, Math.min(page, totalPages));
+
+      const start = (page - 1) * PAGE_SIZE;
+      const end = Math.min(start + PAGE_SIZE, total);
+
+      for (let i = start; i < end; i++) {
+        const { rec } = filtered[i];
+
+        const item = document.createElement("div");
+        item.className = "item";
+
+        // Riga 1: autore e titolo
+        const line1 = document.createElement("div");
+        line1.className = "line1";
+        line1.innerHTML =
+          `<span class="kv"><span class="muted">Autore:</span> ${escapeHtml(safe(rec, "autore"))}</span>` +
+          `<span class="sep">|</span>` +
+          `<span class="kv"><span class="muted">Titolo:</span> ${escapeHtml(safe(rec, "titolo"))}</span>`;
+        item.appendChild(line1);
+
+        // Riga 2: ext_source, ext_author, ext_title (tratti da ext_source)
+        const line2 = document.createElement("div");
+        line2.className = "line2";
+        const src = safe(rec, "ext_source");
+        const ea  = safe(rec, "ext_author");
+        const et  = safe(rec, "ext_title");
+        const srcLabel = src ? ` (tratti da ${escapeHtml(src)})` : "";
+        line2.innerHTML =
+          `<span class="muted">Dati esterni${srcLabel}:</span> ` +
+          `<span class="kv"><span class="muted">ext_author:</span> ${escapeHtml(ea)}</span>` +
+          `<span class="sep">|</span>` +
+          `<span class="kv"><span class="muted">ext_title:</span> ${escapeHtml(et)}</span>`;
+        item.appendChild(line2);
+
+        // Riga 3: campi vari + ext_url
+        const line3 = document.createElement("div");
+        line3.className = "line3";
+        const url = asLink(safe(rec, "ext_url"));
+        line3.innerHTML =
+          `<span class="kv"><span class="muted">n_scheda:</span> ${escapeHtml(safe(rec, "n_scheda"))}</span>` +
+          `<span class="sep">|</span>` +
+          `<span class="kv"><span class="muted">cod_sez:</span> ${escapeHtml(safe(rec, "cod_sez"))}</span>` +
+          `<span class="sep">|</span>` +
+          `<span class="kv"><span class="muted">n_s_sez:</span> ${escapeHtml(safe(rec, "n_s_sez"))}</span>` +
+          `<span class="sep">|</span>` +
+          `<span class="kv"><span class="muted">soggetto:</span> ${escapeHtml(safe(rec, "soggetto"))}</span>` +
+          `<span class="sep">|</span>` +
+          `<span class="kv"><span class="muted">collezion:</span> ${escapeHtml(safe(rec, "collezion"))}</span>` +
+          `<span class="sep">|</span>` +
+          `<span class="kv"><span class="muted">ext_url:</span> ${
+            url ? `<a class="url" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>` : ""
+          }</span>`;
+        item.appendChild(line3);
+
+        resultsDiv.appendChild(item);
+      }
+
+      resultsDiv.style.display = "";
+      pager.style.display = totalPages > 1 ? "" : "none";
+      pageInfo.textContent = `Pagina ${page} / ${totalPages} — risultati ${start + 1}-${end} di ${total}`;
+    }
+
+    function updateMeta(tokensA, tokensT) {
+      const countPill = document.getElementById("countPill");
+      const matchInfo = document.getElementById("matchInfo");
+      const origOnly = document.getElementById("origOnly").checked;
+      const strictAll = document.getElementById("strictAll").checked;
+
+      countPill.textContent = `${records.length} record`;
+
+      const totalTokens = (tokensA?.length || 0) + (tokensT?.length || 0);
+      if (totalTokens === 0) {
+        matchInfo.textContent = "";
+      } else {
+        const scope = origOnly ? "solo titolo+autore" : "titolo+autore+ext_title+ext_author";
+        const mode = strictAll ? "AND rigoroso" : "ranking per parole trovate";
+        matchInfo.textContent = `Trovati: ${filtered.length} (ambito: ${scope}; modalità: ${mode})`;
+      }
+    }
+
+    function setStatus(msg) {
+      document.getElementById("status").textContent = msg;
+    }
+
+    function loadCSV() {
+      document.getElementById("downloadBtn").setAttribute("href", CSV_FILENAME);
+
+      Papa.parse(CSV_FILENAME, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: false,
+        complete: (res) => {
+          if (res.errors && res.errors.length) {
+            setStatus("Caricato con alcuni avvisi; controllare il CSV in caso di anomalie.");
+            console.warn(res.errors);
+          } else {
+            setStatus("Archivio caricato. Inserisci autore e/o titolo per cercare.");
+          }
+
+          records = (res.data || []).map(r => {
+            r.__idx_author_orig = buildIndexForFields(r, ORIG_AUTHOR_FIELDS);
+            r.__idx_title_orig  = buildIndexForFields(r, ORIG_TITLE_FIELDS);
+            r.__idx_author_ext  = buildIndexForFields(r, EXT_AUTHOR_FIELDS);
+            r.__idx_title_ext   = buildIndexForFields(r, EXT_TITLE_FIELDS);
+
+            // default: estesi
+            r.__idx_author_active = r.__idx_author_ext;
+            r.__idx_title_active  = r.__idx_title_ext;
+            return r;
+          });
+
+          updateActiveIndexes();
+          updateMeta([], []);
+        },
+        error: (err) => {
+          console.error(err);
+          setStatus("Errore nel caricamento del CSV. Verifica che la pagina sia servita via HTTP e che il file sia nella stessa cartella.");
+        }
+      });
+    }
+
+    // Escaping
+    function escapeHtml(s) {
+      return String(s || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+    function escapeAttr(s) {
+      return String(s || "").replaceAll('"', "%22");
+    }
+
+    // Eventi UI
+    function debounceSearch() {
+      window.clearTimeout(window.__t);
+      window.__t = window.setTimeout(runSearch, 180);
+    }
+
+    document.getElementById("qAuthor").addEventListener("input", debounceSearch);
+    document.getElementById("qTitle").addEventListener("input", debounceSearch);
+
+    document.getElementById("origOnly").addEventListener("change", () => {
+      updateActiveIndexes();
+      runSearch();
+    });
+
+    document.getElementById("strictAll").addEventListener("change", () => {
+      runSearch();
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      document.getElementById("qAuthor").value = "";
+      document.getElementById("qTitle").value = "";
+      filtered = [];
+      page = 1;
+      updateMeta([], []);
+      render();
+      document.getElementById("qAuthor").focus();
+    });
+
+    document.getElementById("prevBtn").addEventListener("click", () => {
+      page = Math.max(1, page - 1);
+      render();
+    });
+
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      page = Math.min(totalPages, page + 1);
+      render();
+    });
+
+    // Avvio
+    loadCSV();
+  </script>
+</body>
+</html>

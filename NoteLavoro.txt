@@ -89,4 +89,36 @@ rischieste 6.1.26
 ERRORE ERRORE ERRORE
 rileggendo la mail a Panzanelli, Donà e GPZ del 20.2.25 h. 12:29 che contiene analisi e allegati sulla classificazione, scopro che sono partito dal file sbagliato, senza segnature
 
-ripartire dal file libri_out_con_segnature.xlsx e produrre 
+riparto dal file libri_out_con_segnature.xlsx e produco pprimiMilleLibri.xlsx senza cancellare nulla
+
+chiedo a ChatGPT (lo script precedente è sparito, ora lo salvo)
+estrarre dal file xlsx, libro per libro, cioè riga per riga, tutto il materiale utile per una ricerca bibliografica nei grandi cataloghi delle biblioteche adottando un formato che indichi, per ogni elemento, il campo di proveniena, es. autore, titolo, ecc. ecc. e salvalo libro per libro in un file csv
+
+aggiunge inutili campi, rigenero e chiedo uno script per riuso e ottimo, invece di C nel nome campo vuoto originario, mette "noName"
+
+produce il file biblio_longform_all_records.csv e prepara uno script Python per fare la stessa operazione su altri xlsx con la stessa struttura, che salvo con nome
+xlsx_to_biblio_longform.py
+
+pulisco cartella base creando olds in cui copio programmi e materiale precedente prima della riga ERRORE ERRORE ERRORE qui sopra
+ricerca_corrispondenze4.ipynb diventa ora ricerca_corrispondenze.ipynb
+lo faccio adattare al nuovo formato di biblio_longform_all_records.csv
+
+nuova chat "Aggiornamento programma input"
+ricerca_corrispondenze.ipynb è il programma attuale. biblio_longform_all_recordsOLD.csv è il vecchio input (funzionava) e biblio_longform_all_records.csv è il nuovo input (che ora rompe). Voglio che continui a produrre wide nello stesso formato.
+
+ora il programma si chiama ricerca_corrispondenze_FIXED.ipynb e funzionerebbe anche sul vecchio formato
+
+lancio ricerca_corrispondenze_FIXED.ipynb e va in blocco al primo libro; lo faccio correggere
+rilancio ricerca_corrispondenze_FIXED2.ipynb che usa dei timoout e poi ancora ricerca_corrispondenze_FIXED3, ma... scarta SBN
+lo provo tanto per provare, ma il test per sapere se SBN opera è
+
+nc -vz -w 3 opac.sbn.it 443
+
+ricerca_corrispondenze_FIXED3 trova molto su OL
+
+DEVO FARGLI PUBBLICARE segnatura e noName (vuoto) modificando JavaScript e facendo temponaneamente un index2.html
+DEVO SEGNALARE I NOMI CAMBIATI
+
+
+
+ 
