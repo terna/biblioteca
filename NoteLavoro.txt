@@ -112,12 +112,29 @@ lancio ricerca_corrispondenze_FIXED.ipynb e va in blocco al primo libro; lo facc
 rilancio ricerca_corrispondenze_FIXED2.ipynb che usa dei timoout e poi ancora ricerca_corrispondenze_FIXED3, ma... scarta SBN
 lo provo tanto per provare, ma il test per sapere se SBN opera è
 
+***************************
+
 nc -vz -w 3 opac.sbn.it 443
 
-ricerca_corrispondenze_FIXED3 trova molto su OL
+***************************
 
-DEVO FARGLI PUBBLICARE segnatura e noName (vuoto) modificando JavaScript e facendo temponaneamente un index2.html
-DEVO SEGNALARE I NOMI CAMBIATI
+ricerca_corrispondenze_FIXED3 trova molto su OL
+PASS1 found=524 not_found=476 | SBN=0 OL=508 LoC=5 IA=11
+PASS2 pass2_found=260 pass2_still_not_found=216 | SBN=0 OL=252 LoC=4 IA=4
+
+DEVO FARGLI PUBBLICARE segnatura e noName (vuoto) modificando JavaScript e facendo temporaneamente una cartella prova2 con il nuovo index.html
+
+miglioramenti richiesti per il programma in JavaScript: 
+
+considerando il file biblio_wide_records_enriched.csv migliora il programma JavaScript del file index.html
+in fondo alla prima riga di risposta metti il campo pagine
+dopo la casella n_s_sez metti segnatura seguita dal contenuto di noName ma senza indicare il nome di quest'ultimo campo
+tutto il resto invariato
+
+
+uso temporaneamente prova2/ con l'archivio senza SBN e il nuovo index.html
+
+
 
 
 

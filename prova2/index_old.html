@@ -295,9 +295,7 @@
         line1.innerHTML =
           `<span class="kv"><span class="muted">Autore:</span> ${escapeHtml(safe(rec, "autore"))}</span>` +
           `<span class="sep">|</span>` +
-          `<span class="kv"><span class="muted">Titolo:</span> ${escapeHtml(safe(rec, "titolo"))}</span>`
-          `<span class="sep">|</span>` +
-          `<span class="kv"><span class="muted">pagine:</span> ${escapeHtml(safe(rec, "pagine"))}</span>`;
+          `<span class="kv"><span class="muted">Titolo:</span> ${escapeHtml(safe(rec, "titolo"))}</span>`;
         item.appendChild(line1);
 
         // Riga 2: ext_source, ext_author, ext_title (tratti da ext_source)
@@ -324,8 +322,6 @@
           `<span class="kv"><span class="muted">cod_sez:</span> ${escapeHtml(safe(rec, "cod_sez"))}</span>` +
           `<span class="sep">|</span>` +
           `<span class="kv"><span class="muted">n_s_sez:</span> ${escapeHtml(safe(rec, "n_s_sez"))}</span>` +
-          `<span class="sep">|</span>` +
-          `<span class="kv"><span class="muted">segnatura:</span> ${escapeHtml(safe(rec, "noName"))}</span>` +
           `<span class="sep">|</span>` +
           `<span class="kv"><span class="muted">soggetto:</span> ${escapeHtml(safe(rec, "soggetto"))}</span>` +
           `<span class="sep">|</span>` +
