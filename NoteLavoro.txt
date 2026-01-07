@@ -142,6 +142,13 @@ uso temporaneamente prova2/ con l'archivio senza SBN e il nuovo index.html versi
 
 ripartito SBN che era fermo, uso ricerca_corrispondenze_FIXED ma non trova nulla; ChatGPT mi chiarisce che per ripartire devo cancellare gli enriched e il json; faccio e riparte *****************
 
+ora in https://terna.github.io/biblioteca/prova/ c'è il catologo con solo 94 titoli non trovati, dai 724 iniziali
+
+passo alle mail a Dolce, Panzanelli, Donà delle Rose, Zanetta
+poi con OK GPZ
+Fratel Luca Bianchini <fr.luca@cottolengo.org>
+Don Paolo Boggio <paoloboggio@cottolengo.org>
+
 
 
 

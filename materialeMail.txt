@@ -1,24 +1,40 @@
 Scrivo a Dolce, Donà, Panzanelli, Zanetta
 
-usato una cascata di ricerca Opac SBN, Open Library, Library of Congress Catalog, Internet Archive in cascata
+Care e cari,
 
-OpacSBN e WorldCat sono strettamente interconnessi con ...
+a febbraio del 2025 mi ero impegnato a lavorare sul catalogo del patrimonio bibliotecario storico del Cottolengo.
 
-primi mille com prova, il tempo di cacolo è cira 1,5 ore per via della ricerca online
+Finalmente, in questi giorni più tranquilli ho potuto concentrarmi sul lavoro e vi segnalo quanto fatto.
 
-dopo la ricerca è immediata
+Dal file Excel con circa 50mila volumi ricevuto da Fratel Luca Bianchini ho estratto, come prova di lavoro, le prime mille righe. Si tratta di una prova severa perché, per quei mille volumi, il titolo è riportato solo in 276 casi. Si tratta di opera con segnatura che inizia con SR, quindi sono libri nella disponibilità delle Suore, forse ben noti come autore e quindi il titolo poteva essere superfluo, ma come prova è una scelta interessante perché impegnativa.
 
-provare a ...
+Obiettivi: completamento della catalogazione di ogni volume e aggiunta di un indirizzo web a un catalogo esterno, dove il libro è schedato con criteri bibliografici standard.
 
-prove, poi incontro di persona o online, poi avvio la produzione con 3000 libri per notte, circa 5 ore, 16 giorni
+Ho usato usato una "cascata" di ricerca: si inizia con il catalogo nazionale Opac SBN, se non si trova il riferimento si passa a Open Library, quindi al Library of Congress Catalog, infine a Internet Archive (deposito un po' indifferenziato di materiale). Annoto che Opac SBN e WorldCat, altro grande catalogo, sono interconnessi, ma i libri italiani di fine XIX e inizio XX secolo sono meglio coperti in SBN.
 
-i primi mille libri sono schedati in modo piuttosto incompleto, ottimo banco di prova; la segnatura inizia prevalentemente con SR, quindi sono libri nella dispobilità delle Suore, ma come esperimento va benissimo, essendo record incompleti
+Ho preparato un programma in Python che cerca online i mille libri, con il seguente ritrovamento in due passaggi:
+PASS1 SBN=668 OL=43 LoC=10 IA=1
+PASS2 SBN=152 OL=20 LoC=12 IA=0
+tot   SBN=820 OL=63 LoC=22 IA=1
 
-da 724 senza titolo a 94
+Quindi, da 724 iniziali senza titolo a 94 finali. Il primo passaggio produce risultati con elevata affidabilità, il secondo può introdurre qualche errore. Il tempo di calcolo, per via della ricerca online, è circa 1,5 ore.
 
-esempio con ""
+La ricerca nel catalogo, realizzata con un programma in JavaScript, è invece immediata, come potete verificare a https://terna.github.io/biblioteca/prova/ 
 
-prova con e senza flag
+Prove suggerite: 
+i) termine Russell negli autori, il risultato non cambia cliccando sul flag che richiede solo ricerca sui campi originari; 
+ii) dopo un 'Pulisci', termine Russell nel campo del titolo, e ora il risultato cambia drasticamente con il flag acceso o spento; 
+iii) sempre dopo un 'Pulisci', scrivere "Introduzione alla filosofia", con le virgolette, nel campo titolo, con flag spento; togliendo le " i ritrovamenti diventano moltissimi (125) anche perché 'alla' compare in molti titoli; ora, accendendo il flag 'Modalità rigorosa', i ritrovamenti scendono a 2 come in precedenza.
+
+Notare la presenza del link al catalogo online dove il libro è stato trovato prioritariamente.
+
+Vi chiedo di fare un po' di prove e inviarmi dubbi e suggerimenti. Eventualmente fissiamo un incontro online o in presenza.
+
+A collaudo terminato, lancerò la preparazione dell'intero catalogo. Con 3000 libri ricercati a notte, occupando 5 ore, in 17 giorni il lavoro è ultimato.
+
+Grazie in anticipo per le vostre osservazioni, saluti cordialissimi,
+
+Pietro Terna
 
 ---
 
