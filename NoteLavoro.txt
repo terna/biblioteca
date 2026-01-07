@@ -138,6 +138,10 @@ tutto il resto
 
 uso temporaneamente prova2/ con l'archivio senza SBN e il nuovo index.html versione ter con le correzioni qui sopra
 
+7.1.25
+
+ripartito SBN che era fermo, uso ricerca_corrispondenze_FIXED ma non trova nulla; ChatGPT mi chiarisce che per ripartire devo cancellare gli enriched e il json; faccio e riparte *****************
+
 
 
 
