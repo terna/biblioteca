@@ -149,6 +149,8 @@ poi con OK GPZ
 Fratel Luca Bianchini <fr.luca@cottolengo.org>
 Don Paolo Boggio <paoloboggio@cottolengo.org>
 
+8.1.26, nome => Biblioteca Santa Caterina da Siena e San Francesco, fondo storico del Cottolengo
+
 
 
 
